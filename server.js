@@ -1,23 +1,17 @@
 const express = require("express");
-const fs = require("fs");
 const path = require("path");
+const { getIpos } = require("./services/ipoService");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const dataPath = path.join(__dirname, "data", "ipos.json");
 const publicDir = path.join(__dirname, "public");
-
-function loadIpos() {
-  const raw = fs.readFileSync(dataPath, "utf8");
-  return JSON.parse(raw);
-}
 
 app.use(express.static(publicDir));
 
-app.get("/api/ipos", (req, res) => {
+app.get("/api/ipos", async (req, res) => {
   try {
-    const ipos = loadIpos();
-    res.json({ ipos });
+    const { ipos, source, updatedAt } = await getIpos();
+    res.json({ ipos, source, updatedAt });
   } catch (error) {
     res.status(500).json({ error: "Failed to load IPO data." });
   }

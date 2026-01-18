@@ -10,7 +10,7 @@ const i18n = {
     statOversub: "平均超额认购",
     statTopScore: "最高评分",
     calendarTitle: "打新日历",
-    calendarSubtitle: "关键节点：申购、公布中签、上市",
+    calendarSubtitle: "关键节点：申购、定价、公布中签、上市",
     month: "月视图",
     week: "周视图",
     listTitle: "IPO 列表",
@@ -45,14 +45,17 @@ const i18n = {
     detailIndustry: "行业",
     detailOfferPrice: "发行价",
     detailLotSize: "一手股数",
+    detailSubscription: "申购区间",
+    detailPricing: "定价日期",
+    detailAllotment: "公布中签",
     detailSponsor: "保荐人",
     detailCornerstone: "基石投资者",
     detailCornerstonePct: "基石占比",
     detailOversub: "超额认购",
     detailRevenue: "营收 CAGR",
     detailProfit: "利润趋势",
+    detailPricing: "定价日期",
     detailListing: "上市日期",
-    detailSubscription: "申购区间",
     bucketMarket: "市场热度",
     bucketCornerstone: "基石与保荐人",
     bucketIndustry: "行业与估值",
@@ -63,6 +66,7 @@ const i18n = {
     ratingAvoid: "放弃",
     eventOpen: "招股开始",
     eventClose: "招股截止",
+    eventPricing: "定价",
     eventAllotment: "公布中签",
     eventListing: "上市",
     weekKey: "第{week}周 {year}",
@@ -91,7 +95,7 @@ const i18n = {
     statOversub: "Avg Oversub",
     statTopScore: "Top Smart Score",
     calendarTitle: "IPO Calendar",
-    calendarSubtitle: "Key milestones: subscription, allotment, listing",
+    calendarSubtitle: "Key milestones: subscription, pricing, allotment, listing",
     month: "Month",
     week: "Week",
     listTitle: "IPO List",
@@ -126,14 +130,17 @@ const i18n = {
     detailIndustry: "Industry",
     detailOfferPrice: "Offer Price",
     detailLotSize: "Lot Size",
+    detailSubscription: "Subscription Window",
+    detailPricing: "Pricing Date",
+    detailAllotment: "Allotment Date",
     detailSponsor: "Sponsor",
     detailCornerstone: "Cornerstone",
     detailCornerstonePct: "Cornerstone Pct",
     detailOversub: "Oversub",
     detailRevenue: "Revenue CAGR",
     detailProfit: "Profit Trend",
+    detailPricing: "Pricing Date",
     detailListing: "Listing Date",
-    detailSubscription: "Subscription Window",
     bucketMarket: "Market Heat",
     bucketCornerstone: "Cornerstone and Sponsor",
     bucketIndustry: "Industry and Valuation",
@@ -144,6 +151,7 @@ const i18n = {
     ratingAvoid: "Avoid",
     eventOpen: "Subscription opens",
     eventClose: "Subscription closes",
+    eventPricing: "Pricing",
     eventAllotment: "Allotment",
     eventListing: "Listing",
     weekKey: "W{week} {year}",
@@ -195,14 +203,44 @@ function formatDecimal(value, digits) {
 function formatOversub(value, digits = 0) {
   const suffix = currentLang === "zh" ? "倍" : "x";
   const numeric = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(numeric)) return `${value}${suffix}`;
+  if (!Number.isFinite(numeric)) return "--";
   const formatted = digits > 0 ? formatDecimal(numeric, digits) : formatNumber(numeric);
   return `${formatted}${suffix}`;
 }
 
 function formatLotSize(value) {
   const unit = currentLang === "zh" ? "股" : "shares";
+  if (!Number.isFinite(value)) return "--";
   return `${formatNumber(value)} ${unit}`;
+}
+
+function formatPrice(value) {
+  if (!Number.isFinite(value)) return "--";
+  return formatDecimal(value, 2);
+}
+
+function formatDateSafe(value) {
+  if (!value) return "--";
+  return formatDate(value);
+}
+
+function toNumber(value) {
+  const numeric = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+function normalizeIpo(ipo) {
+  return {
+    ...ipo,
+    issuePrice: toNumber(ipo.issuePrice),
+    lotSize: toNumber(ipo.lotSize),
+    sponsorBreakRate: toNumber(ipo.sponsorBreakRate),
+    cornerstonePct: toNumber(ipo.cornerstonePct),
+    oversubMultiple: toNumber(ipo.oversubMultiple),
+    peRatio: toNumber(ipo.peRatio),
+    peerPe: toNumber(ipo.peerPe),
+    revenueCAGR: toNumber(ipo.revenueCAGR)
+  };
 }
 
 function formatCornerstone(name) {
@@ -214,14 +252,14 @@ function getDisplayName(ipo) {
   const zh = ipo.nameZh || "";
   const en = ipo.nameEn || ipo.name || "";
   if (zh && en) return currentLang === "zh" ? `${zh} / ${en}` : `${en} / ${zh}`;
-  return zh || en || "";
+  return zh || en || "--";
 }
 
 function getDisplayIndustry(ipo) {
   const zh = ipo.industryZh || "";
   const en = ipo.industryEn || ipo.industry || "";
   if (zh && en) return currentLang === "zh" ? `${zh} / ${en}` : `${en} / ${zh}`;
-  return zh || en || "";
+  return zh || en || "--";
 }
 
 function getSearchText(ipo) {
@@ -269,6 +307,7 @@ function getEventLabel(key) {
   const map = {
     open: t("eventOpen"),
     close: t("eventClose"),
+    pricing: t("eventPricing"),
     allotment: t("eventAllotment"),
     listing: t("eventListing")
   };
@@ -356,10 +395,11 @@ function profitScore(trend) {
 }
 
 function calculateScore(ipo) {
-  const market = oversubScore(ipo.oversubMultiple) + marginScore(ipo.marginFullDay1, ipo.oversubMultiple);
-  const core = cornerstoneScore(ipo.topTierCornerstone, ipo.cornerstonePct) + sponsorScore(ipo.sponsorBreakRate, ipo.greenShoe);
-  const sector = industryScore(ipo.sectorHeat) + valuationScore(ipo.peRatio, ipo.peerPe);
-  const fundamentals = growthScore(ipo.revenueCAGR) + profitScore(ipo.profitTrend);
+  const oversub = Number.isFinite(ipo.oversubMultiple) ? ipo.oversubMultiple : 0;
+  const market = oversubScore(oversub) + marginScore(ipo.marginFullDay1, oversub);
+  const core = cornerstoneScore(ipo.topTierCornerstone, ipo.cornerstonePct || 0) + sponsorScore(ipo.sponsorBreakRate || 0, ipo.greenShoe);
+  const sector = industryScore(ipo.sectorHeat) + valuationScore(ipo.peRatio || 0, ipo.peerPe || 0);
+  const fundamentals = growthScore(ipo.revenueCAGR || 0) + profitScore(ipo.profitTrend);
   const total = market + core + sector + fundamentals;
 
   return {
@@ -405,11 +445,14 @@ function renderStats() {
   }
 
   const upcomingCount = ipos.filter((ipo) => getStatus(ipo) === "upcoming").length;
-  const avgOversub = ipos.reduce((sum, ipo) => sum + ipo.oversubMultiple, 0) / ipos.length;
+  const oversubValues = ipos.map((ipo) => ipo.oversubMultiple).filter((value) => Number.isFinite(value));
+  const avgOversub = oversubValues.length
+    ? oversubValues.reduce((sum, value) => sum + value, 0) / oversubValues.length
+    : 0;
   const topScore = Math.max(...ipos.map((ipo) => scoreMap.get(ipo.id).total));
 
   upcomingEl.textContent = upcomingCount;
-  oversubEl.textContent = formatOversub(avgOversub, 1);
+  oversubEl.textContent = oversubValues.length ? formatOversub(avgOversub, 1) : "--";
   topScoreEl.textContent = `${topScore}`;
 }
 
@@ -518,21 +561,36 @@ function renderDetails() {
 
   renderScoreBars(scoreData);
 
-  details.innerHTML = `
-    <div class="detail"><span>${t("detailName")}</span>${getDisplayName(ipo)}</div>
-    <div class="detail"><span>${t("detailTicker")}</span>${ipo.ticker}</div>
-    <div class="detail"><span>${t("detailIndustry")}</span>${getDisplayIndustry(ipo)}</div>
-    <div class="detail"><span>${t("detailOfferPrice")}</span>HK$ ${ipo.issuePrice.toFixed(2)}</div>
-    <div class="detail"><span>${t("detailLotSize")}</span>${formatLotSize(ipo.lotSize)}</div>
-    <div class="detail"><span>${t("detailSponsor")}</span>${ipo.sponsor}</div>
-    <div class="detail"><span>${t("detailCornerstone")}</span>${formatCornerstone(ipo.cornerstone)}</div>
-    <div class="detail"><span>${t("detailCornerstonePct")}</span>${ipo.cornerstonePct}%</div>
-    <div class="detail"><span>${t("detailOversub")}</span>${formatOversub(ipo.oversubMultiple)}</div>
-    <div class="detail"><span>${t("detailRevenue")}</span>${ipo.revenueCAGR}%</div>
-    <div class="detail"><span>${t("detailProfit")}</span>${getProfitLabel(ipo.profitTrend)}</div>
-    <div class="detail"><span>${t("detailListing")}</span>${formatDate(ipo.listingDate)}</div>
-    <div class="detail"><span>${t("detailSubscription")}</span>${formatDate(ipo.subscriptionStart)} - ${formatDate(ipo.subscriptionEnd)}</div>
-  `;
+  const detailItems = [
+    { label: t("detailName"), value: getDisplayName(ipo) },
+    { label: t("detailTicker"), value: ipo.ticker || "--" },
+    { label: t("detailIndustry"), value: getDisplayIndustry(ipo) || "--" },
+    { label: t("detailOfferPrice"), value: `HK$ ${formatPrice(ipo.issuePrice)}` },
+    { label: t("detailLotSize"), value: formatLotSize(ipo.lotSize) },
+    { label: t("detailSubscription"), value: `${formatDateSafe(ipo.subscriptionStart)} - ${formatDateSafe(ipo.subscriptionEnd)}` }
+  ];
+
+  if (ipo.pricingDate) {
+    detailItems.push({ label: t("detailPricing"), value: formatDateSafe(ipo.pricingDate) });
+  }
+
+  if (ipo.allotmentDate) {
+    detailItems.push({ label: t("detailAllotment"), value: formatDateSafe(ipo.allotmentDate) });
+  }
+
+  detailItems.push(
+    { label: t("detailListing"), value: formatDateSafe(ipo.listingDate) },
+    { label: t("detailOversub"), value: formatOversub(ipo.oversubMultiple) },
+    { label: t("detailSponsor"), value: ipo.sponsor || "--" },
+    { label: t("detailCornerstone"), value: formatCornerstone(ipo.cornerstone) || "--" },
+    { label: t("detailCornerstonePct"), value: Number.isFinite(ipo.cornerstonePct) ? `${ipo.cornerstonePct}%` : "--" },
+    { label: t("detailRevenue"), value: Number.isFinite(ipo.revenueCAGR) ? `${ipo.revenueCAGR}%` : "--" },
+    { label: t("detailProfit"), value: getProfitLabel(ipo.profitTrend) || "--" }
+  );
+
+  details.innerHTML = detailItems.map((item) => `
+    <div class="detail"><span>${item.label}</span>${item.value}</div>
+  `).join("");
 }
 
 function getWeekNumber(date) {
@@ -552,12 +610,20 @@ function formatWeekKey(date) {
 }
 
 function buildEvents() {
-  return ipos.flatMap((ipo) => [
-    { date: ipo.subscriptionStart, type: "open", ipo },
-    { date: ipo.subscriptionEnd, type: "close", ipo },
-    { date: ipo.allotmentDate, type: "allotment", ipo },
-    { date: ipo.listingDate, type: "listing", ipo }
-  ]).sort((a, b) => new Date(a.date) - new Date(b.date));
+  return ipos.flatMap((ipo) => {
+    const events = [
+      { date: ipo.subscriptionStart, type: "open", ipo },
+      { date: ipo.subscriptionEnd, type: "close", ipo },
+      { date: ipo.allotmentDate, type: "allotment", ipo },
+      { date: ipo.listingDate, type: "listing", ipo }
+    ];
+
+    if (ipo.pricingDate) {
+      events.push({ date: ipo.pricingDate, type: "pricing", ipo });
+    }
+
+    return events.filter((event) => event.date);
+  }).sort((a, b) => new Date(a.date) - new Date(b.date));
 }
 
 function renderCalendar() {
@@ -634,11 +700,23 @@ function renderPredictor() {
     return;
   }
 
+  const oversub = Number.isFinite(ipo.oversubMultiple) && ipo.oversubMultiple > 0
+    ? ipo.oversubMultiple
+    : null;
+
+  if (!oversub) {
+    document.getElementById("alloc-ratio").textContent = "--";
+    document.getElementById("one-lot-chance").textContent = "--";
+    document.getElementById("at-least-one").textContent = "--";
+    document.getElementById("lots-needed").textContent = "--";
+    return;
+  }
+
   const lotsInput = document.getElementById("lot-input");
   const lots = clamp(parseInt(lotsInput.value, 10) || 1, 1, 200);
 
-  const alloc = allocationRatio(ipo.oversubMultiple);
-  const p1 = oneLotProbability(ipo.oversubMultiple);
+  const alloc = allocationRatio(oversub);
+  const p1 = oneLotProbability(oversub);
   const atLeastOne = 1 - Math.pow(1 - p1, lots);
   const lotsNeeded = Math.max(1, Math.ceil(Math.log(1 - 0.9) / Math.log(1 - p1)));
 
@@ -657,7 +735,7 @@ function downloadSnapshot(ipo, scoreData) {
     t("snapshotListing", { date: ipo.listingDate }),
     t("snapshotSponsor", { sponsor: ipo.sponsor }),
     t("snapshotCornerstone", { cornerstone: formatCornerstone(ipo.cornerstone) }),
-    t("snapshotOffer", { price: ipo.issuePrice.toFixed(2) })
+    t("snapshotOffer", { price: formatPrice(ipo.issuePrice) })
   ].join("\n");
 
   const blob = new Blob([content], { type: "text/plain" });
@@ -806,6 +884,13 @@ function setupActions() {
   document.getElementById("focus-open").addEventListener("click", () => {
     document.getElementById("status-filter").value = "open";
     renderList();
+    const openItem = ipos.find((ipo) => getStatus(ipo) === "open");
+    if (openItem) {
+      selectedId = openItem.id;
+      renderList();
+      renderDetails();
+      renderPredictor();
+    }
   });
 
   document.getElementById("download-snapshot").addEventListener("click", () => {
@@ -839,7 +924,7 @@ async function loadIpos() {
 
 async function init() {
   try {
-    ipos = await loadIpos();
+    ipos = (await loadIpos()).map(normalizeIpo);
   } catch (error) {
     ipos = [];
   }
