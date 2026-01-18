@@ -1,9 +1,11 @@
 const fs = require("fs");
 const path = require("path");
 const { fetchAastocksCalendar } = require("./sources/aastocks");
+const { fetchMoomooCalendar } = require("./sources/moomoo");
 
 const AASTOCKS_URL = process.env.AASTOCKS_URL || "";
-const DATA_SOURCE = (process.env.DATA_SOURCE || (AASTOCKS_URL ? "aastocks" : "static")).toLowerCase();
+const MOOMOO_URL = process.env.MOOMOO_URL || "";
+const DATA_SOURCE = (process.env.DATA_SOURCE || (MOOMOO_URL ? "moomoo" : (AASTOCKS_URL ? "aastocks" : "static"))).toLowerCase();
 const CACHE_TTL_MS = Number(process.env.CACHE_TTL_MS || 10 * 60 * 1000);
 const STATIC_PATH = process.env.STATIC_PATH || path.join(__dirname, "..", "data", "ipos.json");
 const STATIC_FALLBACK = (process.env.STATIC_FALLBACK || "true").toLowerCase() === "true";
@@ -21,6 +23,14 @@ function readStaticIpos() {
 }
 
 async function loadFromSource() {
+  if (DATA_SOURCE === "moomoo") {
+    if (!MOOMOO_URL) {
+      throw new Error("MOOMOO_URL is not configured.");
+    }
+    const items = await fetchMoomooCalendar(MOOMOO_URL);
+    return { ipos: items, source: "MOOMOO" };
+  }
+
   if (DATA_SOURCE === "aastocks") {
     if (!AASTOCKS_URL) {
       throw new Error("AASTOCKS_URL is not configured.");
