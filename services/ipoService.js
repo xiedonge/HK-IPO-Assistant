@@ -4,7 +4,7 @@ const { fetchAastocksCalendar } = require("./sources/aastocks");
 const { fetchMoomooCalendar } = require("./sources/moomoo");
 
 const AASTOCKS_URL = process.env.AASTOCKS_URL || "";
-const MOOMOO_URL = process.env.MOOMOO_URL || "";
+const MOOMOO_URL = process.env.MOOMOO_URL || "https://www.moomoo.com/quote/hk/ipo?from=futunn";
 const DATA_SOURCE = (process.env.DATA_SOURCE || (MOOMOO_URL ? "moomoo" : (AASTOCKS_URL ? "aastocks" : "static"))).toLowerCase();
 const CACHE_TTL_MS = Number(process.env.CACHE_TTL_MS || 10 * 60 * 1000);
 const STATIC_PATH = process.env.STATIC_PATH || path.join(__dirname, "..", "data", "ipos.json");
