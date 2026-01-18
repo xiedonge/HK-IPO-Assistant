@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>港股打新助手 Dashboard</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="grain"></div>
+  <div class="wrap">
+    <header class="hero">
+      <div class="brand panel" style="animation-delay:0.05s;">
+        <div class="brand-top">
+          <h1 id="brand-title">港股打新助手</h1>
+          <div class="toggle lang-toggle" id="lang-toggle">
+            <button data-lang="zh" class="active">中文</button>
+            <button data-lang="en">EN</button>
+          </div>
+        </div>
+        <p class="tagline" id="brand-tagline">用数据驱动港股打新决策，跟踪关键日期、对比基本面并透明评分。</p>
+        <div class="quick-actions">
+          <button class="btn primary" id="focus-top">聚焦最高评分</button>
+          <button class="btn" id="focus-open">只看申购中</button>
+          <button class="btn" id="download-snapshot">导出快照</button>
+        </div>
+      </div>
+      <div class="stats panel" style="animation-delay:0.12s;">
+        <div class="stat">
+          <div class="label" id="stat-upcoming-label">待申购 IPO</div>
+          <div class="value" id="stat-upcoming">--</div>
+        </div>
+        <div class="stat">
+          <div class="label" id="stat-oversub-label">平均超额认购</div>
+          <div class="value" id="stat-oversub">--</div>
+        </div>
+        <div class="stat">
+          <div class="label" id="stat-topscore-label">最高评分</div>
+          <div class="value" id="stat-topscore">--</div>
+        </div>
+      </div>
+    </header>
+    <main class="dashboard">
+      <div class="col">
+        <section class="panel calendar" style="animation-delay:0.18s;">
+          <div class="panel-header">
+            <div>
+              <h2 id="calendar-title">打新日历</h2>
+              <div class="subtle" id="calendar-subtitle">关键节点：申购、公布中签、上市</div>
+            </div>
+            <div class="toggle" id="calendar-toggle">
+              <button data-mode="month" class="active" id="calendar-month">月视图</button>
+              <button data-mode="week" id="calendar-week">周视图</button>
+            </div>
+          </div>
+          <div id="calendar-groups"></div>
+        </section>
+        <section class="panel list" style="animation-delay:0.24s;">
+          <div class="panel-header">
+            <div>
+              <h2 id="list-title">IPO 列表</h2>
+              <div class="subtle" id="list-subtitle">点击 IPO 查看详情与评分</div>
+            </div>
+            <div class="filters">
+              <input id="search-input" type="text" placeholder="搜索名称、代码、行业">
+              <select id="status-filter">
+                <option value="all" id="status-option-all">全部状态</option>
+                <option value="open" id="status-option-open">申购中</option>
+                <option value="upcoming" id="status-option-upcoming">即将开始</option>
+                <option value="allotment" id="status-option-allotment">公布中签</option>
+                <option value="listed" id="status-option-listed">已上市</option>
+              </select>
+            </div>
+          </div>
+          <div class="list-grid" id="ipo-list"></div>
+        </section>
+      </div>
+      <div class="col">
+        <section class="panel scoring" style="animation-delay:0.3s;">
+          <div class="panel-header">
+            <div>
+              <h2 id="scoring-title">打新值得评分</h2>
+              <div class="subtle" id="scoring-subtitle">加权总分（满分 100）</div>
+            </div>
+            <div id="score-rating" class="score-pill">--</div>
+          </div>
+          <div class="score-summary">
+            <div class="score-value"><span id="score-total">--</span><small>/100</small></div>
+            <div class="bars" id="score-bars"></div>
+          </div>
+          <div class="details-grid" id="ipo-details"></div>
+          <div class="calendar-actions">
+            <button class="btn" id="add-calendar">添加申购期到日历</button>
+          </div>
+          <details>
+            <summary id="scoring-logic-title">评分逻辑</summary>
+            <div class="subtle" id="scoring-logic-text" style="margin-top:8px;">
+              市场热度(35)、基石与保荐人(30)、行业与估值(20)、财务基本面(15)。
+            </div>
+          </details>
+        </section>
+        <section class="panel predictor" style="animation-delay:0.36s;">
+          <div class="panel-header">
+            <div>
+              <h2 id="predictor-title">中签概率预估</h2>
+              <div class="subtle" id="predictor-subtitle">估算至少中一手的概率</div>
+            </div>
+            <button class="btn" id="reset-lots">重置</button>
+          </div>
+          <div class="predictor-grid">
+            <label>
+              <span id="applied-lots-label">申购手数</span>
+              <input id="lot-input" type="number" min="1" max="200" value="3">
+            </label>
+            <div class="predictor-cards">
+              <div class="predictor-card">
+                <h4 id="label-retail-allocation">零售分配比例</h4>
+                <div class="value" id="alloc-ratio">--</div>
+              </div>
+              <div class="predictor-card">
+                <h4 id="label-one-lot">一手中签率</h4>
+                <div class="value" id="one-lot-chance">--</div>
+              </div>
+              <div class="predictor-card">
+                <h4 id="label-at-least-one">至少中一手</h4>
+                <div class="value" id="at-least-one">--</div>
+              </div>
+              <div class="predictor-card">
+                <h4 id="label-lots-needed">达到 90% 需手数</h4>
+                <div class="value" id="lots-needed">--</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+    <footer id="footer-text">港股打新评分与日历规划 MVP 原型。</footer>
+  </div>
+</body>
+</html>
